@@ -50,7 +50,7 @@ app = dash.Dash(__name__)
 
 # Default camera settings for initial zoom
 default_camera = dict(
-    eye=dict(x=0.45, y=0.3, z=0.65)
+    eye=dict(x=0.45, y=0.3, z=0.6)
 )
 
 # App layout
@@ -65,7 +65,7 @@ app.layout = html.Div([
                     options=[{'label': nt, 'value': nt} for nt in ['gNoise', 'lpNoise']],
                     value='gNoise'
                 )
-            ], style={'width': '60%', 'display': 'inline-block', 'padding': '6px'}),
+            ], style={'width': '70%', 'display': 'inline-block', 'padding': '6px'}),
             html.Div([
                 html.Label('Noise When:'),
                 dcc.Dropdown(
@@ -73,7 +73,7 @@ app.layout = html.Div([
                     options=[{'label': nw, 'value': nw} for nw in ['in', 'post']],
                     value='in'
                 )
-            ], style={'width': '60%', 'display': 'inline-block', 'padding': '6px'})
+            ], style={'width': '70%', 'display': 'inline-block', 'padding': '6px'})
         ], style={'display': 'flex', 'justify-content': 'space-between'}),
         html.Div([
             html.Div([
@@ -83,7 +83,7 @@ app.layout = html.Div([
                     options=[{'label': nat, 'value': nat} for nat in ['add', 'mult', 'both']],
                     value='add'
                 )
-            ], style={'width': '60%', 'display': 'inline-block', 'padding': '6px'}),
+            ], style={'width': '70%', 'display': 'inline-block', 'padding': '6px'}),
             html.Div([
                 html.Label('Delay Value:'),
                 dcc.Dropdown(
@@ -91,7 +91,7 @@ app.layout = html.Div([
                     options=[{'label': str(d), 'value': d} for d in range(1, 6)],
                     value=1
                 )
-            ], style={'width': '60%', 'display': 'inline-block', 'padding': '6px'})
+            ], style={'width': '70%', 'display': 'inline-block', 'padding': '6px'})
         ], style={'display': 'flex', 'justify-content': 'space-between'}),
         html.Div([
             html.Label('Noise Level:'),
@@ -103,7 +103,7 @@ app.layout = html.Div([
                 value=0,
                 marks={round(i * 0.05, 2): f'{round(i * 0.05, 2)}' for i in range(16)}
             )
-        ], style={'width': '98%', 'padding': '6px'}),
+        ], style={'width': '110%', 'padding': '6px'}),
         html.Div([
             html.Label('Number of Nearest Neighbors:'),
             dcc.Dropdown(
@@ -111,11 +111,11 @@ app.layout = html.Div([
                 options=[{'label': str(k), 'value': k} for k in range(1, 21)],
                 value=5
             )
-        ], style={'width': '98%', 'padding': '6px'})
-    ], style={'width': '25%', 'display': 'inline-block', 'verticalAlign': 'top', 'padding': '6px'}),
+        ], style={'width': '60%', 'padding': '6px'})
+    ], style={'width': '60%', 'display': 'inline-block', 'verticalAlign': 'top', 'padding': '6px'}),
     html.Div([
         dcc.Graph(id='manifold-graph', style={'height': '80vh'})
-    ], style={'width': '74%', 'display': 'inline-block', 'padding': '6px'})
+    ], style={'width': '100%', 'display': 'inline-block', 'padding': '6px'})
 ])
 
 # Callback to update the graph based on selections
@@ -167,29 +167,30 @@ def update_graph(noise_type, noise_when, noise_add_type, noise_level, delay, k_n
     # Highlight nearest neighbors if a point is selected
     if click_data and click_data['points']:
         selected_point = click_data['points'][0]
-        selected_index = selected_point['customdata']
-        selected_trace = selected_point['curveNumber']
+        if 'customdata' in selected_point:
+            selected_index = selected_point['customdata']
+            selected_trace = selected_point['curveNumber']
 
-        if selected_trace < 4:  # Ensure the clicked trace is within the embeddings
-            selected_embedding_name = list(embeddings.keys())[selected_trace]
-            selected_embedding = embeddings[selected_embedding_name]
+            if selected_trace < 4:  # Ensure the clicked trace is within the embeddings
+                selected_embedding_name = list(embeddings.keys())[selected_trace]
+                selected_embedding = embeddings[selected_embedding_name]
 
-            neighbor_indices = find_nearest_neighbors(selected_embedding, selected_index, k_neighbors)
+                neighbor_indices = find_nearest_neighbors(selected_embedding, selected_index, k_neighbors)
 
-            # Add highlighted points to the corresponding embedding trace
-            for j, (trace_name, trace_embedding) in enumerate(embeddings.items()):
-                neighbor_points = trace_embedding[neighbor_indices]
-                highlight_trace = go.Scatter3d(
-                    x=neighbor_points[:, 0],
-                    y=neighbor_points[:, 1],
-                    z=neighbor_points[:, 2],
-                    mode='markers',
-                    name=f'Neighbors in {trace_name}',
-                    marker=dict(size=5, color='red', opacity=0.8)
-                )
-                row = j // 2 + 1
-                col = j % 2 + 1
-                fig.add_trace(highlight_trace, row=row, col=col)
+                # Add highlighted points to the corresponding embedding trace
+                for j, (trace_name, trace_embedding) in enumerate(embeddings.items()):
+                    neighbor_points = trace_embedding[neighbor_indices]
+                    highlight_trace = go.Scatter3d(
+                        x=neighbor_points[:, 0],
+                        y=neighbor_points[:, 1],
+                        z=neighbor_points[:, 2],
+                        mode='markers',
+                        name=f'Neighbors in {trace_name}',
+                        marker=dict(size=5, color='red', opacity=0.8)
+                    )
+                    row = j // 2 + 1
+                    col = j % 2 + 1
+                    fig.add_trace(highlight_trace, row=row, col=col)
 
     # Apply the camera settings to each subplot
     fig.update_layout(
@@ -234,4 +235,4 @@ def update_graph(noise_type, noise_when, noise_add_type, noise_level, delay, k_n
 if __name__ == '__main__':
     # Run the app
     app.run_server(debug=True, use_reloader=False)
- 
+       
