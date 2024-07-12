@@ -2,3 +2,5 @@ conda create -n Lorenz_Interactive_Viz python=3.9
 conda activate Lorenz_Interactive_Viz
 conda install pandas
 pip install dash plotly
+pip install scikit-learn
+conda install conda-forge::parallel
