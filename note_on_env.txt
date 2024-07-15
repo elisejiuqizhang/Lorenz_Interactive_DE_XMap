@@ -4,3 +4,4 @@ conda install pandas
 pip install dash plotly
 pip install scikit-learn
 conda install conda-forge::parallel
+conda install matplotlib

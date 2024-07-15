@@ -55,20 +55,21 @@ def find_corresponding_points(manifolds, time_indices):
     return corresponding_points
 
 # Function to calculate density estimates using Euclidean distances in 3D
-def calculate_density(points, n_neighbors):
+def calculate_density(points, n_neighbors, epsilon=1e-10):
     if points.shape[1] != 3:
         raise ValueError("Points must be in 3D space for Euclidean distance calculation.")
     # Ensure n_neighbors does not exceed the number of points
     n_neighbors = min(n_neighbors, len(points))
     nbrs = NearestNeighbors(n_neighbors=n_neighbors).fit(points)
     distances, _ = nbrs.kneighbors(points)
+    distances = np.maximum(distances, epsilon)  # Avoid division by zero
     density = np.mean(1 / np.linalg.norm(distances, axis=1))
     return density
 
 # Function to calculate densities for neighborhoods from a source manifold
 def calculate_densities_from_source(manifolds, source_key, n_neighbors):
     source_embedding = manifolds[source_key]
-    _, indices = calculate_nearest_neighbors(source_embedding, n_neighbors)
+    distances, indices = calculate_nearest_neighbors(source_embedding, n_neighbors)
     densities = []
     for i, neighbors in enumerate(indices):
         time_indices = retrieve_time_indices(neighbors)
@@ -76,24 +77,25 @@ def calculate_densities_from_source(manifolds, source_key, n_neighbors):
         density_row = {'Index': i}
         density_row[f'{source_key}_Density'] = calculate_density(source_embedding[neighbors], n_neighbors)
         for key, points in corresponding_points.items():
-            if key != source_key and points.size > 0:
+            if points.size > 0:
                 density_row[f'{key}_Density'] = calculate_density(points, n_neighbors)
             else:
                 density_row[f'{key}_Density'] = np.nan  # Use NaN for empty points
         densities.append(density_row)
     return densities
 
+
 # Main function to execute the entire process and save results
 def main():
     parser = argparse.ArgumentParser(description='Run Lorenz system density calculations.')
-    parser.add_argument('--noiseType', type=str, required=True, choices=['gNoise', 'lpNoise'], help='Type of noise')
-    parser.add_argument('--noiseWhen', type=str, required=True, choices=['in', 'post'], help='When noise is added')
-    parser.add_argument('--noiseAddType', type=str, required=True, choices=['add', 'mult', 'both'], help='Type of noise addition')
-    parser.add_argument('--noiseLevel', type=float, required=True, help='Noise level')
-    parser.add_argument('--delay', type=int, required=True, help='Delay for time embeddings')
-    parser.add_argument('--n_neighbors', type=int, required=True, help='Number of nearest neighbors')
+    parser.add_argument('--noiseType', type=str, default='gNoise', choices=['gNoise', 'lpNoise'], help='Type of noise')
+    parser.add_argument('--noiseWhen', type=str, default='in', choices=['in', 'post'], help='When noise is added')
+    parser.add_argument('--noiseAddType', type=str, default='add', choices=['add', 'mult', 'both'], help='Type of noise addition')
+    parser.add_argument('--noiseLevel', type=float, default=0.05, help='Noise level')
+    parser.add_argument('--delay', type=int, default='1', help='Delay for time embeddings')
+    parser.add_argument('--n_neighbors', type=int, default='5', help='Number of nearest neighbors')
     parser.add_argument('--data_dir', type=str, default='/Users/elise/Documents/Recherches/Projects/Causality/Lorenz_Interactive_Viz/Lorenz', help='Directory with input data')
-    parser.add_argument('--output_dir', type=str, default='output', help='Directory to save the output results')
+    parser.add_argument('--output_dir', type=str, default='outputs/LorenzNNDensity', help='Directory to save the output results')
 
     args = parser.parse_args()
     
