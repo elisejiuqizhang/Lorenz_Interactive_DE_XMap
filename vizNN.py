@@ -15,7 +15,10 @@ def load_noise_data(noiseType, noiseWhen, noiseAddType, noiseLevel, data_dir='/U
     else:
         file_name = f"{noiseType}_{noiseWhen}_{noiseAddType}_{round(noiseLevel, 2)}.csv"
     file_path = os.path.join(data_dir, file_name)
-    return pd.read_csv(file_path)
+    data=pd.read_csv(file_path)
+    # fill NaN values with the mean of the column
+    data = data.fillna(data.mean())
+    return data
 
 # Function to create time delay embeddings
 def create_delay_embedding(series, delay=1, dimension=3):
