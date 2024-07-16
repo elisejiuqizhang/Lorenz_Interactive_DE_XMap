@@ -15,8 +15,8 @@ def load_noise_data(noiseType, noiseWhen, noiseAddType, noiseLevel, data_dir='/U
     else:
         file_name = f"{noiseType}_{noiseWhen}_{noiseAddType}_{round(noiseLevel, 2)}.csv"
     file_path = os.path.join(data_dir, file_name)
-    data=pd.read_csv(file_path)
-    # fill NaN values with the mean of the column
+    data = pd.read_csv(file_path)
+    # Fill NaN values with the mean of the column
     data = data.fillna(data.mean())
     return data
 
@@ -31,7 +31,7 @@ def create_delay_embedding(series, delay=1, dimension=3):
     return embedding
 
 # Function to create 3D scatter plot traces for an embedding
-def create_3d_scatter_trace(embedding, name):
+def create_3d_scatter_trace(embedding, name, time_indices):
     return go.Scatter3d(
         x=embedding[:, 0],
         y=embedding[:, 1],
@@ -39,7 +39,8 @@ def create_3d_scatter_trace(embedding, name):
         mode='markers',
         name=name,
         marker=dict(size=2, opacity=0.8),
-        customdata=np.arange(len(embedding))  # Store indices as custom data
+        customdata=time_indices,  # Store time indices as custom data
+        hovertemplate='Time Index: %{customdata}<br>X: %{x}<br>Y: %{y}<br>Z: %{z}'
     )
 
 # Function to find the k-nearest neighbors of a point in an embedding
@@ -118,7 +119,11 @@ app.layout = html.Div([
     ], style={'width': '60%', 'display': 'inline-block', 'verticalAlign': 'top', 'padding': '6px'}),
     html.Div([
         dcc.Graph(id='manifold-graph', style={'height': '80vh'})
-    ], style={'width': '100%', 'display': 'inline-block', 'padding': '6px'})
+    ], style={'width': '100%', 'display': 'inline-block', 'padding': '6px'}),
+    html.Div([
+        html.P("Author: Your Name"),
+        html.P("© 2024 Your Name. Licensed under the MIT License.")
+    ], style={'textAlign': 'center', 'padding': '10px'})
 ])
 
 # Callback to update the graph based on selections
@@ -145,8 +150,10 @@ def update_graph(noise_type, noise_when, noise_add_type, noise_level, delay, k_n
         'Z Delay Embedding': create_delay_embedding(initial_data['Z'], delay, 3)
     }
 
+    time_indices = np.arange(len(embeddings['Ground Truth']))
+
     # Create traces for all embeddings
-    traces = [create_3d_scatter_trace(embedding, name) for name, embedding in embeddings.items()]
+    traces = [create_3d_scatter_trace(embedding, name, time_indices) for name, embedding in embeddings.items()]
 
     # Create the figure with four subplots
     fig = make_subplots(
@@ -189,7 +196,9 @@ def update_graph(noise_type, noise_when, noise_add_type, noise_level, delay, k_n
                         z=neighbor_points[:, 2],
                         mode='markers',
                         name=f'Neighbors in {trace_name}',
-                        marker=dict(size=5, color='red', opacity=0.8)
+                        marker=dict(size=5, color='red', opacity=0.8),
+                        customdata=neighbor_indices,  # Store indices as custom data
+                        hovertemplate='Time Index: %{customdata}<br>X: %{x}<br>Y: %{y}<br>Z: %{z}'
                     )
                     row = j // 2 + 1
                     col = j % 2 + 1
@@ -238,4 +247,4 @@ def update_graph(noise_type, noise_when, noise_add_type, noise_level, delay, k_n
 if __name__ == '__main__':
     # Run the app
     app.run_server(debug=True, use_reloader=False)
-       
+
