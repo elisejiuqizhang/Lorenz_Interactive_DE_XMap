@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 import argparse
 
 # Function to load and process the density output files
-def load_and_process_density_files(output_dir, noiseType, noiseWhen, noiseAddType, delay, n_neighbors, noiseLevels):
+def load_and_process_density_files(output_dir, noiseType, noiseWhen, noiseAddType, delay, n_neighbors, noiseLevels, downsampleType, downsampleFactor):
     results = []
-
+        
     # Iterate over each subdirectory in the output directory
     for subdir in os.listdir(output_dir):
         subdir_path = os.path.join(output_dir, subdir)
@@ -22,6 +22,12 @@ def load_and_process_density_files(output_dir, noiseType, noiseWhen, noiseAddTyp
                         'noise_level': noise_level
                     }
                     
+                    # if no downsample -in folder noDownsample
+                    if downsampleType==None or downsampleType=="None" or downsampleType=='none':
+                        subdir_path = os.path.join(subdir_path, 'noDownsample')
+                    else: # if downsample
+                        subdir_path = os.path.join(subdir_path, downsampleType, str(downsampleFactor))    
+                    
                     for file in os.listdir(subdir_path):
                         if file.endswith('.csv'):
                             file_path = os.path.join(subdir_path, file)
@@ -30,7 +36,7 @@ def load_and_process_density_files(output_dir, noiseType, noiseWhen, noiseAddTyp
                             density_data[file.split('.')[0]] = avg_densities
                     
                     results.append(density_data)
-    
+                    
     return results
 
 # Function to organize data by noise level and generate plots
@@ -81,6 +87,9 @@ def main():
     parser.add_argument('--n_neighbors', type=int, default=5, help='Number of nearest neighbors')
     parser.add_argument('--save_dir', type=str, default='outputs/LorenzNNDensity/viz', help='Directory to save the plots')
 
+    parser.add_argument('--downsampleType', type=str, default=None, help='downsample type, options: None, "a/av/average" (average), "d/de/decimation" (remove/discard the rest), "s/sub/subsample" (randomly sample a subset of half the interval size from each interval, then average)')
+    parser.add_argument('--downsampleFactor', type=int, default=10, help='downsample interval')
+
     args = parser.parse_args()
 
     noiseLevels = [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75]
@@ -88,6 +97,11 @@ def main():
     save_dir=args.save_dir+'/'+f'_{args.noiseType}_{args.noiseWhen}_{args.noiseAddType}_delay{args.delay}_nn{args.n_neighbors}'
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
+    # if no downsample
+    if args.downsampleType==None or args.downsampleType=="None" or args.downsampleType=='none':
+        save_dir = os.path.join(save_dir, 'noDownsample')
+    else: # if downsample
+        save_dir = os.path.join(save_dir, args.downsampleType, str(args.downsampleFactor))
     
     results = load_and_process_density_files(
         args.output_dir, 
@@ -96,7 +110,9 @@ def main():
         args.noiseAddType, 
         args.delay, 
         args.n_neighbors,
-        noiseLevels
+        noiseLevels,
+        args.downsampleType,
+        args.downsampleFactor
     )
     generate_plots(results, save_dir, noiseLevels)
 
