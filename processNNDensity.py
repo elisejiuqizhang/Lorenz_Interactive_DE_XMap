@@ -76,6 +76,60 @@ def generate_plots(results, save_dir, noiseLevels):
         plt.savefig(plot_path)
         plt.close()
 
+# another generate plots function - only plot the the cross mapped neighborhoods, eliminating the source true neighborhood
+def generate_plots_xmap(results, save_dir, noiseLevels):
+    save_dir = os.path.join(save_dir, 'xmap')
+    # Organize data by noise level
+    data_by_noise_level = {}
+    for result in results:
+        noise_level = result.pop('noise_level')
+        for key, value in result.items():
+            if key not in data_by_noise_level:
+                data_by_noise_level[key] = []
+            data_entry = {
+                'noise_level': noise_level,
+                'value': value
+            }
+            data_by_noise_level[key].append(data_entry)
+
+    # Generate and save plots
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    for key, data in data_by_noise_level.items():
+        df = pd.DataFrame(data)
+        df = df.sort_values('noise_level')
+
+        plt.figure()
+        # only plot the cross mapped neighborhoods (the last three columns), eliminating the source true neighborhood (first column after eliminating the index column)
+        if key=='NNFromGroundTruth-AllOtherThree':
+            plt.plot(df['noise_level'], df['value'].apply(lambda x: x['X_Density']), marker='o', label='X')
+            plt.plot(df['noise_level'], df['value'].apply(lambda x: x['Y_Density']), marker='o', label='Y')
+            plt.plot(df['noise_level'], df['value'].apply(lambda x: x['Z_Density']), marker='o', label='Z')
+        elif key=='NNFromDEX-AllOtherThree':
+            plt.plot(df['noise_level'], df['value'].apply(lambda x: x['GroundTruth_Density']), marker='o', label='GroundTruth')
+            plt.plot(df['noise_level'], df['value'].apply(lambda x: x['Y_Density']), marker='o', label='Y')
+            plt.plot(df['noise_level'], df['value'].apply(lambda x: x['Z_Density']), marker='o', label='Z')
+        elif key=='NNFromDEY-AllOtherThree':
+            plt.plot(df['noise_level'], df['value'].apply(lambda x: x['GroundTruth_Density']), marker='o', label='GroundTruth')
+            plt.plot(df['noise_level'], df['value'].apply(lambda x: x['X_Density']), marker='o', label='X')
+            plt.plot(df['noise_level'], df['value'].apply(lambda x: x['Z_Density']), marker='o', label='Z')
+        elif key=='NNFromDEZ-AllOtherThree':
+            plt.plot(df['noise_level'], df['value'].apply(lambda x: x['GroundTruth_Density']), marker='o', label='GroundTruth')
+            plt.plot(df['noise_level'], df['value'].apply(lambda x: x['X_Density']), marker='o', label='X')
+            plt.plot(df['noise_level'], df['value'].apply(lambda x: x['Y_Density']), marker='o', label='Y')
+
+        plt.title(key)
+        plt.xlabel('Noise Level')
+        plt.ylabel('Average Density')
+        plt.grid(True)
+        plt.legend()
+        plot_path = os.path.join(save_dir, f'{key}.png')
+        plt.savefig(plot_path)
+        plt.close()
+
+    
+
 # Main function
 def main():
     parser = argparse.ArgumentParser(description='Process density outputs and generate plots.')
@@ -115,6 +169,7 @@ def main():
         args.downsampleFactor
     )
     generate_plots(results, save_dir, noiseLevels)
+    generate_plots_xmap(results, save_dir, noiseLevels)
 
 if __name__ == "__main__":
     main()
