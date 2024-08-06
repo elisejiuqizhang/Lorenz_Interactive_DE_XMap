@@ -149,10 +149,12 @@ app.layout = html.Div([
             dcc.Slider(
                 id='noise-level-slider',
                 min=0,
-                max=0.75,
+                # max=0.75,
+                max=1.15,
                 step=0.05,
                 value=0,
-                marks={round(i * 0.05, 2): f'{round(i * 0.05, 2)}' for i in range(16)}
+                # marks={round(float(i) * 0.05, 2): f'{round(float(i) * 0.05, 2)}' for i in range(int(1.15/0.05+1))}
+                marks={round(float(i) * 0.05, 2): f'{round(float(i) * 0.05, 2)}' for i in range(round(1.15/0.05)+1)}
             )
         ], style={'width': '110%', 'padding': '6px'}),
         html.Div([
@@ -188,7 +190,7 @@ app.layout = html.Div([
     [State('manifold-graph', 'relayoutData')]
 )
 def update_graph(noise_type, noise_when, noise_add_type, noise_level, delay, downsample_type, downsample_factor, k_neighbors, click_data, relayoutData):
-    noise_level = round(noise_level, 2)
+    noise_level = round(float(noise_level), 2)
     initial_data = load_noise_data(noise_type, noise_when, noise_add_type, noise_level)
 
     # Downsample the data
