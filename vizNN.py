@@ -46,6 +46,27 @@ def downsample_data(data, downsample_type, downsample_factor):
 
     return downsampled_data
 
+# function to filter data, no downsampling
+def filter_data(data, filter_type, filter_factor):
+    if filter_type is None or filter_type.lower() == 'none':
+        return data
+
+    n = len(data)
+    filtered_data = np.zeros((n-filter_factor+1, data.shape[1]))
+
+    if filter_type.lower() in ['a', 'av', 'average']:
+        for i in range(0, n-filter_factor+1):
+            segment=data[i:i+filter_factor]
+            filtered_data[i]=np.mean(segment, axis=0)
+    elif filter_type.lower() in ['m', 'me', 'median']:
+        for i in range(0, n-filter_factor+1):
+            segment=data[i:i+filter_factor]
+            filtered_data[i]=np.median(segment, axis=0)
+    else:
+        raise ValueError('filterType not recognized')
+    
+    return filtered_data
+
 # Function to create time delay embeddings
 def create_delay_embedding(series, delay=1, dimension=3):
     n = len(series)
@@ -144,6 +165,28 @@ app.layout = html.Div([
                 )
             ], style={'width': '70%', 'display': 'inline-block', 'padding': '6px'})
         ], style={'display': 'flex', 'justify-content': 'space-between'}),
+
+        html.Div([
+            html.Div([
+                html.Label('Filtering Type:'),
+                dcc.Dropdown(
+                    id='filtering-type-dropdown',
+                    options=[{'label': 'none', 'value': 'none'},
+                             {'label': 'average', 'value': 'average'},
+                             {'label': 'median', 'value': 'median'}],
+                    value='none'
+                )
+            ], style={'width': '70%', 'display': 'inline-block', 'padding': '6px'}),
+            html.Div([
+                html.Label('Filtering Factor:'),
+                dcc.Dropdown(
+                    id='filtering-factor-dropdown',
+                    options=[{'label': str(f), 'value': f} for f in [5, 8, 10, 12, 15]],
+                    value=5
+                )
+            ], style={'width': '70%', 'display': 'inline-block', 'padding': '6px'})
+        ], style={'display': 'flex', 'justify-content': 'space-between'}),
+
         html.Div([
             html.Label('Noise Level:'),
             dcc.Slider(
@@ -185,17 +228,33 @@ app.layout = html.Div([
      Input('delay-dropdown', 'value'),
      Input('downsampling-type-dropdown', 'value'),
      Input('downsampling-factor-dropdown', 'value'),
+     Input('filtering-type-dropdown', 'value'),
+    Input('filtering-factor-dropdown', 'value'),
      Input('neighbors-dropdown', 'value'),
      Input('manifold-graph', 'clickData')],
     [State('manifold-graph', 'relayoutData')]
 )
-def update_graph(noise_type, noise_when, noise_add_type, noise_level, delay, downsample_type, downsample_factor, k_neighbors, click_data, relayoutData):
+def update_graph(noise_type, noise_when, noise_add_type, noise_level, delay, downsample_type, downsample_factor, filter_type, filter_factor, k_neighbors, click_data, relayoutData):
     noise_level = round(float(noise_level), 2)
     initial_data = load_noise_data(noise_type, noise_when, noise_add_type, noise_level)
 
-    # Downsample the data
-    downsampled_data = downsample_data(initial_data.values, downsample_type, downsample_factor)
-    downsampled_df = pd.DataFrame(downsampled_data, columns=initial_data.columns)
+    # # Downsample the data
+    # downsampled_data = downsample_data(initial_data.values, downsample_type, downsample_factor)
+    # downsampled_df = pd.DataFrame(downsampled_data, columns=initial_data.columns)
+
+    # if only downsampling, elif only filtering, else both (then filtering first)
+    if downsample_type is not None and downsample_type.lower() != 'none' and filter_type is None or filter_type.lower() == 'none':
+        downsampled_data = downsample_data(initial_data.values, downsample_type, downsample_factor)
+        downsampled_df = pd.DataFrame(downsampled_data, columns=initial_data.columns)
+    elif filter_type is not None and filter_type.lower() != 'none' and downsample_type is None or downsample_type.lower() == 'none':
+        filtered_data = filter_data(initial_data.values, filter_type, filter_factor)
+        filtered_df = pd.DataFrame(filtered_data, columns=initial_data.columns)
+        downsampled_df = filtered_df
+    elif downsample_type is not None and downsample_type.lower() != 'none' and filter_type is not None and filter_type.lower() != 'none':
+        filtered_data = filter_data(initial_data.values, filter_type, filter_factor)
+        filtered_df = pd.DataFrame(filtered_data, columns=initial_data.columns)
+        downsampled_data = downsample_data(filtered_df.values, downsample_type, downsample_factor)
+        downsampled_df = pd.DataFrame(downsampled_data, columns=filtered_df.columns)
 
     # Create delay embeddings for X, Y, Z with selected delay
     embeddings = {
